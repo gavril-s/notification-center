@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { recipientsApi, getErrorMessage } from '../api/client'
 import { useAuth } from '../contexts/AuthContext'
@@ -11,8 +11,18 @@ export default function Login() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const { login: authLogin } = useAuth()
+  const { user, login: authLogin } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'source_operator' || user.role === 'admin') {
+        navigate('/operator/templates')
+      } else {
+        navigate('/app/profile')
+      }
+    }
+  }, [user, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

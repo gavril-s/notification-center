@@ -1,8 +1,26 @@
+import { useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useNavigate } from 'react-router-dom'
 import './RecipientProfile.css'
 
 export default function RecipientProfile() {
-  const { user } = useAuth()
+  const { user, isLoading } = useAuth()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate('/login')
+    }
+  }, [user, isLoading, navigate])
+
+  if (isLoading || !user) {
+    return (
+      <div className="loading-screen">
+        <div className="spinner"></div>
+        <p>Загрузка...</p>
+      </div>
+    )
+  }
 
   const roleLabels: Record<string, string> = {
     recipient_user: 'Получатель',

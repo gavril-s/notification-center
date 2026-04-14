@@ -30,7 +30,6 @@ func NewContactService(contactRepo *repository.ContactRepository, auditRepo *rep
 }
 
 type CreateContactRequest struct {
-	UserID  string `json:"user_id" binding:"required"`
 	Channel string `json:"channel" binding:"required,oneof=email sms telegram"`
 	Value   string `json:"value" binding:"required"`
 }

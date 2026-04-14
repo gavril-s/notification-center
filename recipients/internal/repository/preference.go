@@ -109,16 +109,27 @@ func (r *PreferenceRepository) GetByContactID(ctx context.Context, contactID str
 }
 
 func (r *PreferenceRepository) GetByContactAndScope(ctx context.Context, contactID, scopeType string, senderID, scopeID *string) (*domain.Preference, error) {
+	var senderIDFilter, scopeIDFilter interface{}
+	if senderID != nil && *senderID != "" {
+		senderIDFilter = *senderID
+	}
+	if scopeID != nil && *scopeID != "" {
+		scopeIDFilter = *scopeID
+	}
+
 	query := `
 		SELECT id, contact_id, user_id, sender_id, scope_type, scope_id, enabled, quiet_from, quiet_to, blocked_channels, created_at, updated_at
 		FROM recipients.preferences
-		WHERE contact_id = $1 AND scope_type = $2 AND COALESCE(sender_id, '') = COALESCE($3, '') AND COALESCE(scope_id, '') = COALESCE($4, '')
+		WHERE contact_id = $1 AND scope_type = $2 
+			AND (sender_id IS NOT DISTINCT FROM $3)
+			AND (scope_id IS NOT DISTINCT FROM $4)
 	`
 
 	var pref domain.Preference
 	var blockedChannelsJSON []byte
-	err := r.db.QueryRow(ctx, query, contactID, scopeType, senderID, scopeID).Scan(
-		&pref.ID, &pref.ContactID, &pref.UserID, &pref.SenderID, &pref.ScopeType, &pref.ScopeID,
+	var senderIDOut, scopeIDOut *string
+	err := r.db.QueryRow(ctx, query, contactID, scopeType, senderIDFilter, scopeIDFilter).Scan(
+		&pref.ID, &pref.ContactID, &pref.UserID, &senderIDOut, &pref.ScopeType, &scopeIDOut,
 		&pref.Enabled, &pref.QuietFrom, &pref.QuietTo, &blockedChannelsJSON, &pref.CreatedAt, &pref.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -127,6 +138,9 @@ func (r *PreferenceRepository) GetByContactAndScope(ctx context.Context, contact
 	if err != nil {
 		return nil, fmt.Errorf("failed to get preference by scope: %w", err)
 	}
+
+	pref.SenderID = senderIDOut
+	pref.ScopeID = scopeIDOut
 
 	if err := json.Unmarshal(blockedChannelsJSON, &pref.BlockedChannels); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal blocked channels: %w", err)
