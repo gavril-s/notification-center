@@ -200,6 +200,13 @@ func (s *testPreferenceService) isInQuietHours(from, to *string, evaluateAt time
 	}
 
 	currentTime := evaluateAt.Format("15:04")
+
+	// Handle overnight quiet hours (e.g., 22:00-08:00)
+	if *from > *to {
+		return currentTime >= *from || currentTime <= *to
+	}
+
+	// Normal span (e.g., 09:00-18:00)
 	return currentTime >= *from && currentTime <= *to
 }
 
