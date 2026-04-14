@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 	"notification-center/recipients/internal/domain"
 	"notification-center/recipients/internal/repository"
 )
@@ -75,6 +76,10 @@ func (s *testAuthService) Register(ctx context.Context, req *RegisterRequest) (*
 func (s *testAuthService) Login(ctx context.Context, req *LoginRequest) (*RegisterResponse, error) {
 	user, err := s.userRepo.GetByLogin(ctx, req.Login)
 	if err != nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		return nil, ErrInvalidCredentials
 	}
 
@@ -259,10 +264,11 @@ func TestAuthService_Login(t *testing.T) {
 			},
 			userRepo: &MockUserRepo{
 				GetByLoginFunc: func(ctx context.Context, login string) (*domain.User, error) {
+					hash, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 					return &domain.User{
 						ID:           "user-1",
 						Login:        login,
-						PasswordHash: "$2a$10$hashedpassword",
+						PasswordHash: string(hash),
 					}, nil
 				},
 				CreateFunc: func(ctx context.Context, user *domain.User) error {
@@ -294,10 +300,11 @@ func TestAuthService_Login(t *testing.T) {
 			},
 			userRepo: &MockUserRepo{
 				GetByLoginFunc: func(ctx context.Context, login string) (*domain.User, error) {
+					hash, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 					return &domain.User{
 						ID:           "user-1",
 						Login:        login,
-						PasswordHash: "$2a$10$hashedpassword",
+						PasswordHash: string(hash),
 					}, nil
 				},
 			},

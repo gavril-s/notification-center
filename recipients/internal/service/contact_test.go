@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"regexp"
 	"testing"
 
 	"notification-center/recipients/internal/domain"
@@ -160,12 +162,8 @@ func (s *testContactService) validateContact(channel, value string) error {
 }
 
 func matchesRegex(value, pattern string) bool {
-	for i := 0; i < len(value); i++ {
-		if i >= len(pattern) {
-			return false
-		}
-	}
-	return true
+	re := regexp.MustCompile(pattern)
+	return re.MatchString(value)
 }
 
 func TestContactService_Create(t *testing.T) {

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/rabbitmq/amqp091-go"
 	"github.com/stretchr/testify/assert"
 
 	"notification-center/delivery/internal/domain"
@@ -67,6 +66,10 @@ type testConsumerService struct {
 	repo     *testDeliveryRepo
 	deadRepo *testDeadLetterRepo
 	provider *testableProvider
+
+	ackCalled   bool
+	nackCalled  bool
+	nackRequeue bool
 }
 
 func newTestConsumerService(repo *testDeliveryRepo, deadRepo *testDeadLetterRepo, provider *testableProvider) *testConsumerService {
@@ -77,12 +80,65 @@ func newTestConsumerService(repo *testDeliveryRepo, deadRepo *testDeadLetterRepo
 	}
 }
 
+func (s *testConsumerService) ack() {
+	s.ackCalled = true
+}
+
+func (s *testConsumerService) nack(requeue bool) {
+	s.nackCalled = true
+	s.nackRequeue = requeue
+}
+
+func (s *testConsumerService) consumeEvent(ctx context.Context, eventBytes []byte) error {
+	var event domain.DispatchEvent
+	if err := json.Unmarshal(eventBytes, &event); err != nil {
+		s.nack(false)
+		return err
+	}
+
+	exists, err := s.repo.AttemptExists(ctx, event.NotificationID, event.Attempt)
+	if err != nil {
+		s.nack(true)
+		return err
+	}
+	if exists {
+		s.ack()
+		return nil
+	}
+
+	attempt := &domain.DeliveryAttempt{
+		NotificationID: event.NotificationID,
+		AttemptNumber:  event.Attempt,
+		Channel:        event.Channel,
+		ProviderCode:   "mock_provider",
+		Status:         domain.DeliveryStatusPending,
+	}
+
+	if err := s.repo.CreateAttempt(ctx, attempt); err != nil {
+		s.nack(true)
+		return err
+	}
+
+	result := s.provider.Deliver(ctx, &event)
+
+	s.repo.UpdateAttemptStatus(ctx, attempt.ID, result.Status, result.ErrorCode, result.ErrorMessage, nil)
+
+	s.notifyNotificationsService(ctx, event.NotificationID, attempt.ID, result)
+
+	if result.Status == domain.DeliveryStatusFailed && event.Attempt >= 3 {
+		s.saveDeadLetter(ctx, event, result)
+	}
+
+	s.ack()
+	return nil
+}
+
 func TestConsumerService_Consume(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
 		name           string
-		event          domain.DispatchEvent
+		eventBytes     []byte
 		setupMocks     func(repo *testDeliveryRepo, deadRepo *testDeadLetterRepo, provider *testableProvider)
 		expectAck      bool
 		expectNack     bool
@@ -91,16 +147,20 @@ func TestConsumerService_Consume(t *testing.T) {
 	}{
 		{
 			name: "success - delivered",
-			event: domain.DispatchEvent{
-				EventID:         "event-1",
-				NotificationID:  "notif-1",
-				SenderID:        "sender-1",
-				ContactID:       "contact-1",
-				Channel:         "email",
-				Attempt:         1,
-				TraceID:         "trace-1",
-				RenderedContent: "test content",
-			},
+			eventBytes: func() []byte {
+				event := domain.DispatchEvent{
+					EventID:         "event-1",
+					NotificationID:  "notif-1",
+					SenderID:        "sender-1",
+					ContactID:       "contact-1",
+					Channel:         "email",
+					Attempt:         1,
+					TraceID:         "trace-1",
+					RenderedContent: "test content",
+				}
+				b, _ := json.Marshal(event)
+				return b
+			}(),
 			setupMocks: func(repo *testDeliveryRepo, deadRepo *testDeadLetterRepo, provider *testableProvider) {
 				repo.attemptExistsFunc = func(ctx context.Context, notificationID string, attemptNumber int) (bool, error) {
 					return false, nil
@@ -123,44 +183,47 @@ func TestConsumerService_Consume(t *testing.T) {
 			expectRequeue: false,
 		},
 		{
-			name: "unmarshal error",
-			event: domain.DispatchEvent{
-				EventID:        "event-1",
-				NotificationID: "notif-1",
-			},
+			name:       "unmarshal error - invalid JSON",
+			eventBytes: []byte("{invalid json"),
 			setupMocks: func(repo *testDeliveryRepo, deadRepo *testDeadLetterRepo, provider *testableProvider) {
 			},
-			expectAck:      false,
-			expectNack:     true,
-			expectRequeue:  false,
-			expectDeadSave: false,
+			expectAck:     false,
+			expectNack:    true,
+			expectRequeue: false,
 		},
 		{
 			name: "idempotent skip - already processed",
-			event: domain.DispatchEvent{
-				EventID:        "event-1",
-				NotificationID: "notif-1",
-				Attempt:        1,
-			},
+			eventBytes: func() []byte {
+				event := domain.DispatchEvent{
+					EventID:        "event-1",
+					NotificationID: "notif-1",
+					Attempt:        1,
+				}
+				b, _ := json.Marshal(event)
+				return b
+			}(),
 			setupMocks: func(repo *testDeliveryRepo, deadRepo *testDeadLetterRepo, provider *testableProvider) {
 				repo.attemptExistsFunc = func(ctx context.Context, notificationID string, attemptNumber int) (bool, error) {
 					return true, nil
 				}
 			},
-			expectAck:      true,
-			expectNack:     false,
-			expectRequeue:  false,
-			expectDeadSave: false,
+			expectAck:     true,
+			expectNack:    false,
+			expectRequeue: false,
 		},
 		{
 			name: "attempt creation fail",
-			event: domain.DispatchEvent{
-				EventID:        "event-1",
-				NotificationID: "notif-1",
-				Attempt:        1,
-				Channel:        "email",
-				TraceID:        "trace-1",
-			},
+			eventBytes: func() []byte {
+				event := domain.DispatchEvent{
+					EventID:        "event-1",
+					NotificationID: "notif-1",
+					Attempt:        1,
+					Channel:        "email",
+					TraceID:        "trace-1",
+				}
+				b, _ := json.Marshal(event)
+				return b
+			}(),
 			setupMocks: func(repo *testDeliveryRepo, deadRepo *testDeadLetterRepo, provider *testableProvider) {
 				repo.attemptExistsFunc = func(ctx context.Context, notificationID string, attemptNumber int) (bool, error) {
 					return false, nil
@@ -169,23 +232,26 @@ func TestConsumerService_Consume(t *testing.T) {
 					return assert.AnError
 				}
 			},
-			expectAck:      false,
-			expectNack:     true,
-			expectRequeue:  true,
-			expectDeadSave: false,
+			expectAck:     false,
+			expectNack:    true,
+			expectRequeue: true,
 		},
 		{
 			name: "delivery fail",
-			event: domain.DispatchEvent{
-				EventID:         "event-1",
-				NotificationID:  "notif-1",
-				SenderID:        "sender-1",
-				ContactID:       "contact-1",
-				Channel:         "email",
-				Attempt:         1,
-				TraceID:         "trace-1",
-				RenderedContent: "test content",
-			},
+			eventBytes: func() []byte {
+				event := domain.DispatchEvent{
+					EventID:         "event-1",
+					NotificationID:  "notif-1",
+					SenderID:        "sender-1",
+					ContactID:       "contact-1",
+					Channel:         "email",
+					Attempt:         1,
+					TraceID:         "trace-1",
+					RenderedContent: "test content",
+				}
+				b, _ := json.Marshal(event)
+				return b
+			}(),
 			setupMocks: func(repo *testDeliveryRepo, deadRepo *testDeadLetterRepo, provider *testableProvider) {
 				repo.attemptExistsFunc = func(ctx context.Context, notificationID string, attemptNumber int) (bool, error) {
 					return false, nil
@@ -207,23 +273,26 @@ func TestConsumerService_Consume(t *testing.T) {
 					}
 				}
 			},
-			expectAck:      true,
-			expectNack:     false,
-			expectRequeue:  false,
-			expectDeadSave: false,
+			expectAck:     true,
+			expectNack:    false,
+			expectRequeue: false,
 		},
 		{
 			name: "dead letter on max retries exceeded",
-			event: domain.DispatchEvent{
-				EventID:         "event-1",
-				NotificationID:  "notif-1",
-				SenderID:        "sender-1",
-				ContactID:       "contact-1",
-				Channel:         "email",
-				Attempt:         3,
-				TraceID:         "trace-1",
-				RenderedContent: "test content",
-			},
+			eventBytes: func() []byte {
+				event := domain.DispatchEvent{
+					EventID:         "event-1",
+					NotificationID:  "notif-1",
+					SenderID:        "sender-1",
+					ContactID:       "contact-1",
+					Channel:         "email",
+					Attempt:         3,
+					TraceID:         "trace-1",
+					RenderedContent: "test content",
+				}
+				b, _ := json.Marshal(event)
+				return b
+			}(),
 			setupMocks: func(repo *testDeliveryRepo, deadRepo *testDeadLetterRepo, provider *testableProvider) {
 				repo.attemptExistsFunc = func(ctx context.Context, notificationID string, attemptNumber int) (bool, error) {
 					return false, nil
@@ -248,29 +317,31 @@ func TestConsumerService_Consume(t *testing.T) {
 					return nil
 				}
 			},
-			expectAck:      true,
-			expectNack:     false,
-			expectRequeue:  false,
-			expectDeadSave: true,
+			expectAck:     true,
+			expectNack:    false,
+			expectRequeue: false,
 		},
 		{
 			name: "attempt exists error",
-			event: domain.DispatchEvent{
-				EventID:        "event-1",
-				NotificationID: "notif-1",
-				Attempt:        1,
-				Channel:        "email",
-				TraceID:        "trace-1",
-			},
+			eventBytes: func() []byte {
+				event := domain.DispatchEvent{
+					EventID:        "event-1",
+					NotificationID: "notif-1",
+					Attempt:        1,
+					Channel:        "email",
+					TraceID:        "trace-1",
+				}
+				b, _ := json.Marshal(event)
+				return b
+			}(),
 			setupMocks: func(repo *testDeliveryRepo, deadRepo *testDeadLetterRepo, provider *testableProvider) {
 				repo.attemptExistsFunc = func(ctx context.Context, notificationID string, attemptNumber int) (bool, error) {
 					return false, assert.AnError
 				}
 			},
-			expectAck:      false,
-			expectNack:     true,
-			expectRequeue:  true,
-			expectDeadSave: false,
+			expectAck:     false,
+			expectNack:    true,
+			expectRequeue: true,
 		},
 	}
 
@@ -282,101 +353,19 @@ func TestConsumerService_Consume(t *testing.T) {
 
 			tt.setupMocks(repo, deadRepo, provider)
 
-			eventBytes, err := json.Marshal(tt.event)
-			assert.NoError(t, err)
-
-			delivery := &mockDelivery{
-				body: eventBytes,
-				ackFunc: func(multiple bool) error {
-					return nil
-				},
-				nackFunc: func(requeue bool) error {
-					return nil
-				},
-			}
-
 			svc := newTestConsumerService(repo, deadRepo, provider)
-			err = svc.consumeWithMocks(ctx, delivery)
+			_ = svc.consumeEvent(ctx, tt.eventBytes)
 
 			if tt.expectAck {
-				assert.True(t, delivery.ackCalled)
-				assert.False(t, delivery.nackCalled)
+				assert.True(t, svc.ackCalled, "expected ack to be called")
+				assert.False(t, svc.nackCalled, "expected nack not to be called")
 			}
 			if tt.expectNack {
-				assert.True(t, delivery.nackCalled)
-				assert.Equal(t, tt.expectRequeue, delivery.nackRequeue)
+				assert.True(t, svc.nackCalled, "expected nack to be called")
+				assert.Equal(t, tt.expectRequeue, svc.nackRequeue, "requeue flag mismatch")
 			}
 		})
 	}
-}
-
-type mockDelivery struct {
-	body        []byte
-	ackCalled   bool
-	nackCalled  bool
-	nackRequeue bool
-	ackFunc     func(bool) error
-	nackFunc    func(bool) error
-}
-
-func (m *mockDelivery) Body() []byte {
-	return m.body
-}
-
-func (m *mockDelivery) Ack(multiple bool) error {
-	m.ackCalled = true
-	if m.ackFunc != nil {
-		return m.ackFunc(multiple)
-	}
-	return nil
-}
-
-func (m *mockDelivery) Nack(multiple, requeue bool) error {
-	m.nackCalled = true
-	m.nackRequeue = requeue
-	if m.nackFunc != nil {
-		return m.nackFunc(requeue)
-	}
-	return nil
-}
-
-func (s *testConsumerService) consumeWithMocks(ctx context.Context, msg amqp091.Delivery) error {
-	var event domain.DispatchEvent
-	if err := json.Unmarshal(msg.Body, &event); err != nil {
-		return msg.Nack(false, false)
-	}
-
-	exists, err := s.repo.AttemptExists(ctx, event.NotificationID, event.Attempt)
-	if err != nil {
-		return msg.Nack(false, true)
-	}
-	if exists {
-		return msg.Ack(false)
-	}
-
-	attempt := &domain.DeliveryAttempt{
-		NotificationID: event.NotificationID,
-		AttemptNumber:  event.Attempt,
-		Channel:        event.Channel,
-		ProviderCode:   "mock_provider",
-		Status:         domain.DeliveryStatusPending,
-	}
-
-	if err := s.repo.CreateAttempt(ctx, attempt); err != nil {
-		return msg.Nack(false, true)
-	}
-
-	result := s.provider.Deliver(ctx, &event)
-
-	s.repo.UpdateAttemptStatus(ctx, attempt.ID, result.Status, result.ErrorCode, result.ErrorMessage, nil)
-
-	s.notifyNotificationsService(ctx, event.NotificationID, attempt.ID, result)
-
-	if result.Status == domain.DeliveryStatusFailed && event.Attempt >= 3 {
-		s.saveDeadLetter(ctx, event, result)
-	}
-
-	return msg.Ack(false)
 }
 
 func TestConsumerService_NotifyNotificationsService(t *testing.T) {
