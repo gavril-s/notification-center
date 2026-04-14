@@ -62,6 +62,7 @@ func main() {
 
 	// Public API routes
 	api := router.Group("/api")
+	api.Use(middleware.Auth())
 	notificationHandler.RegisterRoutes(api)
 
 	// Internal API routes
