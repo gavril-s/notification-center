@@ -181,7 +181,6 @@ func TestContactService_Create(t *testing.T) {
 			name:   "успешное создание контакта",
 			userID: "user-1",
 			req: &CreateContactRequest{
-				UserID:  "user-1",
 				Channel: "email",
 				Value:   "test@example.com",
 			},
@@ -201,7 +200,6 @@ func TestContactService_Create(t *testing.T) {
 			name:   "некорректный формат email",
 			userID: "user-1",
 			req: &CreateContactRequest{
-				UserID:  "user-1",
 				Channel: "email",
 				Value:   "not-an-email",
 			},
@@ -213,7 +211,6 @@ func TestContactService_Create(t *testing.T) {
 			name:   "некорректный формат телефона",
 			userID: "user-1",
 			req: &CreateContactRequest{
-				UserID:  "user-1",
 				Channel: "sms",
 				Value:   "123",
 			},
@@ -225,7 +222,6 @@ func TestContactService_Create(t *testing.T) {
 			name:   "некорректный формат telegram",
 			userID: "user-1",
 			req: &CreateContactRequest{
-				UserID:  "user-1",
 				Channel: "telegram",
 				Value:   "ab",
 			},
@@ -237,7 +233,6 @@ func TestContactService_Create(t *testing.T) {
 			name:   "контакт уже существует",
 			userID: "user-1",
 			req: &CreateContactRequest{
-				UserID:  "user-1",
 				Channel: "email",
 				Value:   "test@example.com",
 			},

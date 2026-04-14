@@ -101,7 +101,6 @@ func TestContactScenarios_AddEmailContact(t *testing.T) {
 			svc := newTestContactService(repo, &MockAuditLogRepo{})
 
 			req := &CreateContactRequest{
-				UserID:  tt.userID,
 				Channel: "email",
 				Value:   tt.email,
 			}
@@ -228,7 +227,6 @@ func TestContactScenarios_AddPhoneContact(t *testing.T) {
 			svc := newTestContactService(repo, &MockAuditLogRepo{})
 
 			req := &CreateContactRequest{
-				UserID:  tt.userID,
 				Channel: "sms",
 				Value:   tt.phone,
 			}
@@ -355,7 +353,6 @@ func TestContactScenarios_AddTelegramContact(t *testing.T) {
 			svc := newTestContactService(repo, &MockAuditLogRepo{})
 
 			req := &CreateContactRequest{
-				UserID:  tt.userID,
 				Channel: "telegram",
 				Value:   tt.telegram,
 			}
@@ -693,7 +690,6 @@ func TestContactScenarios_Integration(t *testing.T) {
 		svc := newTestContactService(repo, &MockAuditLogRepo{})
 
 		createReq := &CreateContactRequest{
-			UserID:  "user-1",
 			Channel: "email",
 			Value:   "test@example.com",
 		}
