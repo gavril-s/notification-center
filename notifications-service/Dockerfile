@@ -4,10 +4,10 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
-ENV GOPROXY=https://proxy.golang.org,direct
+ENV GOPROXY=direct
 
 COPY go.mod go.sum ./
-RUN GOSUMDB=off go mod download
+RUN go mod download
 
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /notifications-service ./cmd/api
