@@ -1,0 +1,573 @@
+openapi: 3.1.0
+info:
+  title: Notification Center Internal Service Contracts
+  version: 1.0.0
+  description: Frozen Track 0 internal REST contracts shared across Recipients, Sources, Notifications, and Delivery.
+servers:
+  - url: /
+paths:
+  /internal/recipients/resolve:
+    post:
+      summary: Resolve contacts and preference eligibility for candidate channels
+      operationId: resolveRecipientContacts
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/XTraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecipientResolveRequest'
+      responses:
+        '200':
+          description: Contact resolution result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipientResolveResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /internal/recipients/users/{user_id}/contacts:
+    get:
+      summary: Resolve all current contacts linked to a user
+      operationId: getUserContactsInternal
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/XTraceId'
+      responses:
+        '200':
+          description: Contacts linked to the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserContactsResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /internal/sources/templates/{template_id}:
+    get:
+      summary: Resolve a template by id
+      operationId: getTemplateInternal
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/XTraceId'
+      responses:
+        '200':
+          description: Template record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalTemplate'
+        default:
+          $ref: '#/components/responses/Error'
+  /internal/sources/campaigns/{campaign_id}:
+    get:
+      summary: Resolve a campaign by id
+      operationId: getCampaignInternal
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/XTraceId'
+      responses:
+        '200':
+          description: Campaign record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalCampaign'
+        default:
+          $ref: '#/components/responses/Error'
+  /internal/sources/campaigns/due:
+    get:
+      summary: List due campaign occurrences
+      operationId: listDueCampaigns
+      parameters:
+        - $ref: '#/components/parameters/AsOf'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/XTraceId'
+      responses:
+        '200':
+          description: Due campaign occurrences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DueCampaignsResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /internal/sources/groups/{group_id}/members:
+    get:
+      summary: Resolve stable contact ids for a source group
+      operationId: getGroupMembersInternal
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/XTraceId'
+      responses:
+        '200':
+          description: Group membership
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupMembersResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /internal/sources/senders/{sender_id}/operators/{user_id}:
+    get:
+      summary: Verify operator access to a sender
+      operationId: getSenderOperatorPermission
+      parameters:
+        - $ref: '#/components/parameters/SenderId'
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/XTraceId'
+      responses:
+        '200':
+          description: Permission decision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderOperatorPermission'
+        default:
+          $ref: '#/components/responses/Error'
+  /internal/sources/senders/resolve-credential:
+    post:
+      summary: Resolve a sender integration credential into sender identity
+      operationId: resolveSenderCredential
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/XTraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveCredentialRequest'
+      responses:
+        '200':
+          description: Credential resolution result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolveCredentialResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /internal/notifications/{notification_id}/delivery-status:
+    post:
+      summary: Report a transport-level delivery attempt result
+      operationId: updateNotificationDeliveryStatus
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/XTraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveryStatusUpdateRequest'
+      responses:
+        '202':
+          description: Delivery status accepted
+        default:
+          $ref: '#/components/responses/Error'
+  /internal/notifications/scheduler/run:
+    post:
+      summary: Trigger scheduler work
+      operationId: runNotificationScheduler
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/XTraceId'
+      responses:
+        '202':
+          description: Scheduler run accepted
+        default:
+          $ref: '#/components/responses/Error'
+  /internal/notifications/{notification_id}:
+    get:
+      summary: Resolve a notification by id
+      operationId: getNotificationInternal
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/XTraceId'
+      responses:
+        '200':
+          description: Notification record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalNotification'
+        default:
+          $ref: '#/components/responses/Error'
+components:
+  parameters:
+    XRequestId:
+      name: X-Request-ID
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+    XTraceId:
+      name: X-Trace-ID
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SenderId:
+      name: sender_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    GroupId:
+      name: group_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TemplateId:
+      name: template_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CampaignId:
+      name: campaign_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    NotificationId:
+      name: notification_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AsOf:
+      name: as_of
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date-time
+    Limit:
+      name: limit
+      in: query
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+  responses:
+    Error:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    RecipientResolveRequest:
+      type: object
+      required: [sender_id, contact_ids, requested_channels, evaluate_at]
+      properties:
+        sender_id:
+          type: string
+          format: uuid
+        campaign_id:
+          type: [string, 'null']
+          format: uuid
+        group_id:
+          type: [string, 'null']
+          format: uuid
+        contact_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        requested_channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Channel'
+        evaluate_at:
+          type: string
+          format: date-time
+    RecipientResolveResponse:
+      type: object
+      required: [contacts]
+      properties:
+        contacts:
+          type: array
+          items:
+            type: object
+            required: [contact_id, candidates]
+            properties:
+              contact_id:
+                type: string
+                format: uuid
+              user_id:
+                type: [string, 'null']
+                format: uuid
+              candidates:
+                type: array
+                items:
+                  type: object
+                  required: [channel, value, allowed]
+                  properties:
+                    channel:
+                      $ref: '#/components/schemas/Channel'
+                    value:
+                      type: string
+                    allowed:
+                      type: boolean
+                    blocked_reason:
+                      type: [string, 'null']
+    UserContactsResponse:
+      type: object
+      required: [contacts]
+      properties:
+        contacts:
+          type: array
+          items:
+            type: object
+            required: [contact_id, channel, value, enabled]
+            properties:
+              contact_id:
+                type: string
+                format: uuid
+              channel:
+                $ref: '#/components/schemas/Channel'
+              value:
+                type: string
+              enabled:
+                type: boolean
+    InternalTemplate:
+      type: object
+      required: [template_id, sender_id, channel, body, variables, active]
+      properties:
+        template_id:
+          type: string
+          format: uuid
+        sender_id:
+          type: string
+          format: uuid
+        channel:
+          $ref: '#/components/schemas/Channel'
+        subject:
+          type: [string, 'null']
+        body:
+          type: string
+        variables:
+          type: array
+          items:
+            type: string
+        active:
+          type: boolean
+    InternalCampaign:
+      type: object
+      required: [campaign_id, sender_id, group_id, template_id, channels, active]
+      properties:
+        campaign_id:
+          type: string
+          format: uuid
+        sender_id:
+          type: string
+          format: uuid
+        group_id:
+          type: string
+          format: uuid
+        template_id:
+          type: string
+          format: uuid
+        channels:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            $ref: '#/components/schemas/Channel'
+        scheduled_at:
+          type: [string, 'null']
+          format: date-time
+        active:
+          type: boolean
+    DueCampaignsResponse:
+      type: object
+      required: [campaigns, next_cursor]
+      properties:
+        campaigns:
+          type: array
+          items:
+            type: object
+            required: [occurrence_id, campaign_id, sender_id, group_id, template_id, channels, scheduled_at]
+            properties:
+              occurrence_id:
+                type: string
+              campaign_id:
+                type: string
+                format: uuid
+              sender_id:
+                type: string
+                format: uuid
+              group_id:
+                type: string
+                format: uuid
+              template_id:
+                type: string
+                format: uuid
+              channels:
+                type: array
+                minItems: 1
+                maxItems: 1
+                items:
+                  $ref: '#/components/schemas/Channel'
+              scheduled_at:
+                type: string
+                format: date-time
+        next_cursor:
+          type: [string, 'null']
+    GroupMembersResponse:
+      type: object
+      required: [group_id, contact_ids]
+      properties:
+        group_id:
+          type: string
+          format: uuid
+        contact_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    SenderOperatorPermission:
+      type: object
+      required: [allowed, role]
+      properties:
+        allowed:
+          type: boolean
+        role:
+          type: string
+          enum: [source_operator, admin]
+    ResolveCredentialRequest:
+      type: object
+      required: [integration_key]
+      properties:
+        integration_key:
+          type: string
+    ResolveCredentialResponse:
+      type: object
+      required: [sender_id, credential_id, active]
+      properties:
+        sender_id:
+          type: string
+          format: uuid
+        credential_id:
+          type: string
+          format: uuid
+        active:
+          type: boolean
+    DeliveryStatusUpdateRequest:
+      type: object
+      required: [attempt_id, transport_status, provider_code, occurred_at]
+      properties:
+        attempt_id:
+          type: string
+          format: uuid
+        transport_status:
+          type: string
+          enum: [accepted, failed, delivered]
+        provider_code:
+          type: string
+        error_code:
+          type: [string, 'null']
+        occurred_at:
+          type: string
+          format: date-time
+    InternalNotification:
+      type: object
+      required:
+        - notification_id
+        - sender_id
+        - contact_id
+        - channel
+        - status
+        - created_at
+      properties:
+        notification_id:
+          type: string
+          format: uuid
+        sender_id:
+          type: string
+          format: uuid
+        contact_id:
+          type: string
+          format: uuid
+        campaign_id:
+          type: [string, 'null']
+          format: uuid
+        group_id:
+          type: [string, 'null']
+          format: uuid
+        channel:
+          $ref: '#/components/schemas/Channel'
+        status:
+          $ref: '#/components/schemas/CanonicalNotificationStatus'
+        created_at:
+          type: string
+          format: date-time
+        delivered_at:
+          type: [string, 'null']
+          format: date-time
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details, request_id]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+            request_id:
+              type: string
+              format: uuid
+    CanonicalNotificationStatus:
+      type: string
+      enum:
+        - draft
+        - scheduled
+        - queued
+        - processing
+        - sent
+        - delivered
+        - failed
+        - cancelled
+        - skipped_by_preference
+    Channel:
+      type: string
+      enum: [email, sms, telegram]

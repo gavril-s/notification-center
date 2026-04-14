@@ -1,0 +1,373 @@
+openapi: 3.1.0
+info:
+  title: Notification Center Notifications API
+  version: 1.0.0
+  description: Frozen Track 0 public REST contract for the Notifications service.
+servers:
+  - url: /
+paths:
+  /api/notifications/send:
+    post:
+      summary: Accept a sender-scoped notification send request
+      operationId: sendNotification
+      security:
+        - integrationKey: []
+      parameters:
+        - $ref: '#/components/parameters/XRequestId'
+        - $ref: '#/components/parameters/XTraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendNotificationRequest'
+      responses:
+        '202':
+          description: Request accepted for notification materialization
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendNotificationAccepted'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/notifications/history:
+    get:
+      summary: Get recipient or operator notification history
+      operationId: getNotificationHistory
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Mode'
+        - $ref: '#/components/parameters/SenderIdQuery'
+        - $ref: '#/components/parameters/CampaignIdQuery'
+        - $ref: '#/components/parameters/StatusQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Paginated notification history ordered by created_at desc, notification_id desc
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationHistoryResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/notifications/{notification_id}:
+    get:
+      summary: Get a notification by id
+      operationId: getNotificationById
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+      responses:
+        '200':
+          description: Notification record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationDetails'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/notifications/analytics:
+    get:
+      summary: Get per-sender analytics
+      operationId: getNotificationAnalytics
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SenderIdQueryRequired'
+        - $ref: '#/components/parameters/FromQuery'
+        - $ref: '#/components/parameters/ToQuery'
+      responses:
+        '200':
+          description: Per-sender analytics snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderAnalyticsResponse'
+        default:
+          $ref: '#/components/responses/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    integrationKey:
+      type: apiKey
+      in: header
+      name: X-Integration-Key
+  parameters:
+    XRequestId:
+      name: X-Request-ID
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+    XTraceId:
+      name: X-Trace-ID
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+    Mode:
+      name: mode
+      in: query
+      required: false
+      schema:
+        type: string
+        enum: [recipient, operator]
+        default: recipient
+    SenderIdQuery:
+      name: sender_id
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+    SenderIdQueryRequired:
+      name: sender_id
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CampaignIdQuery:
+      name: campaign_id
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+    NotificationId:
+      name: notification_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    StatusQuery:
+      name: status
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/CanonicalNotificationStatus'
+    FromQuery:
+      name: from
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+    ToQuery:
+      name: to
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date-time
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Size:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+  responses:
+    Error:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    SendNotificationRequest:
+      type: object
+      required: [template_id, contact_ids, channels, variables, idempotency_key]
+      properties:
+        template_id:
+          type: string
+          format: uuid
+        campaign_id:
+          type: [string, 'null']
+          format: uuid
+        contact_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        channels:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            $ref: '#/components/schemas/Channel'
+        variables:
+          type: object
+          additionalProperties: true
+        scheduled_at:
+          type: [string, 'null']
+          format: date-time
+        idempotency_key:
+          type: string
+    SendNotificationAccepted:
+      type: object
+      required: [sender_id, accepted, idempotency_key]
+      properties:
+        sender_id:
+          type: string
+          format: uuid
+        accepted:
+          type: boolean
+        idempotency_key:
+          type: string
+        scheduled_at:
+          type: [string, 'null']
+          format: date-time
+    NotificationHistoryItem:
+      type: object
+      required:
+        - notification_id
+        - contact_id
+        - channel
+        - status
+        - sender_id
+        - created_at
+      properties:
+        notification_id:
+          type: string
+          format: uuid
+        contact_id:
+          type: string
+          format: uuid
+        channel:
+          $ref: '#/components/schemas/Channel'
+        status:
+          $ref: '#/components/schemas/CanonicalNotificationStatus'
+        sender_id:
+          type: string
+          format: uuid
+        campaign_id:
+          type: [string, 'null']
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        delivered_at:
+          type: [string, 'null']
+          format: date-time
+    NotificationHistoryResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/NotificationHistoryItem'
+    NotificationDetails:
+      allOf:
+        - $ref: '#/components/schemas/NotificationHistoryItem'
+        - type: object
+          properties:
+            group_id:
+              type: [string, 'null']
+              format: uuid
+            subject:
+              type: [string, 'null']
+            rendered_content:
+              type: string
+            unsubscribe_url:
+              type: [string, 'null']
+    SenderAnalyticsResponse:
+      type: object
+      required: [sender_id, totals]
+      properties:
+        sender_id:
+          type: string
+          format: uuid
+        from:
+          type: [string, 'null']
+          format: date-time
+        to:
+          type: [string, 'null']
+          format: date-time
+        totals:
+          type: object
+          required: [queued, delivered, failed, skipped_by_preference]
+          properties:
+            queued:
+              type: integer
+              minimum: 0
+            delivered:
+              type: integer
+              minimum: 0
+            failed:
+              type: integer
+              minimum: 0
+            skipped_by_preference:
+              type: integer
+              minimum: 0
+    PaginatedEnvelope:
+      type: object
+      required: [items, page, size, total]
+      properties:
+        items:
+          type: array
+          items: {}
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details, request_id]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+            request_id:
+              type: string
+              format: uuid
+    CanonicalNotificationStatus:
+      type: string
+      enum:
+        - draft
+        - scheduled
+        - queued
+        - processing
+        - sent
+        - delivered
+        - failed
+        - cancelled
+        - skipped_by_preference
+    Channel:
+      type: string
+      enum: [email, sms, telegram]

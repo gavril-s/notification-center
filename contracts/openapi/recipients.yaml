@@ -1,0 +1,456 @@
+openapi: 3.1.0
+info:
+  title: Notification Center Recipients API
+  version: 1.0.0
+  description: Frozen Track 0 public REST contract for the Recipients service.
+servers:
+  - url: /
+paths:
+  /api/recipients/register:
+    post:
+      summary: Register a recipient user
+      operationId: registerRecipient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Recipient registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/recipients/login:
+    post:
+      summary: Log in an existing recipient user
+      operationId: loginRecipient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/recipients/refresh:
+    post:
+      summary: Refresh access and refresh tokens
+      operationId: refreshRecipientTokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Tokens refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/recipients/me:
+    get:
+      summary: Get current authenticated recipient profile
+      operationId: getRecipientMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipientProfile'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/recipients/contacts:
+    get:
+      summary: List contacts linked to the current user
+      operationId: listRecipientContacts
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Paginated contact list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactListResponse'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      summary: Create a contact for the current user
+      operationId: createRecipientContact
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateContactRequest'
+      responses:
+        '201':
+          description: Contact created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/recipients/contacts/{contact_id}:
+    put:
+      summary: Update a contact for the current user
+      operationId: updateRecipientContact
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ContactId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateContactRequest'
+      responses:
+        '200':
+          description: Contact updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      summary: Soft-delete a contact for the current user
+      operationId: deleteRecipientContact
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ContactId'
+      responses:
+        '204':
+          description: Contact soft-deleted
+        default:
+          $ref: '#/components/responses/Error'
+  /api/recipients/preferences:
+    get:
+      summary: List current user preferences
+      operationId: listRecipientPreferences
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Paginated preference list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreferenceListResponse'
+        default:
+          $ref: '#/components/responses/Error'
+    put:
+      summary: Upsert a recipient preference
+      operationId: upsertRecipientPreference
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreferenceUpsertRequest'
+      responses:
+        '200':
+          description: Preference saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Preference'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/recipients/unsubscribe:
+    post:
+      summary: Apply sender-level or mailing-level unsubscribe
+      operationId: unsubscribeRecipient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnsubscribeRequest'
+      responses:
+        '200':
+          description: Unsubscribe applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnsubscribeResponse'
+        default:
+          $ref: '#/components/responses/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Size:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    ContactId:
+      name: contact_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Error:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    AuthTokensResponse:
+      type: object
+      required: [user_id, access_token, refresh_token]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+    RegisterRequest:
+      type: object
+      required: [login, password]
+      properties:
+        login:
+          type: string
+        password:
+          type: string
+        claim_contact_token:
+          type: [string, 'null']
+    LoginRequest:
+      type: object
+      required: [login, password]
+      properties:
+        login:
+          type: string
+        password:
+          type: string
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+    RecipientProfile:
+      type: object
+      required: [user_id, login, role]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        login:
+          type: string
+        role:
+          $ref: '#/components/schemas/InteractiveRole'
+    CreateContactRequest:
+      type: object
+      required: [channel, value]
+      properties:
+        channel:
+          $ref: '#/components/schemas/Channel'
+        value:
+          type: string
+    UpdateContactRequest:
+      type: object
+      properties:
+        value:
+          type: string
+        enabled:
+          type: boolean
+    Contact:
+      type: object
+      required: [contact_id, channel, value, enabled]
+      properties:
+        contact_id:
+          type: string
+          format: uuid
+        channel:
+          $ref: '#/components/schemas/Channel'
+        value:
+          type: string
+        enabled:
+          type: boolean
+        verified:
+          type: boolean
+        deleted_at:
+          type: [string, 'null']
+          format: date-time
+    ContactListResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Contact'
+    PreferenceUpsertRequest:
+      type: object
+      required:
+        - contact_id
+        - scope_type
+        - enabled
+        - blocked_channels
+      properties:
+        contact_id:
+          type: string
+          format: uuid
+        sender_id:
+          type: [string, 'null']
+          format: uuid
+        scope_type:
+          type: string
+          enum: [global, sender, campaign, group]
+        scope_id:
+          type: [string, 'null']
+          format: uuid
+        enabled:
+          type: boolean
+        quiet_from:
+          type: [string, 'null']
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+        quiet_to:
+          type: [string, 'null']
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+        blocked_channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Channel'
+    Preference:
+      allOf:
+        - $ref: '#/components/schemas/PreferenceUpsertRequest'
+        - type: object
+          required: [preference_id]
+          properties:
+            preference_id:
+              type: string
+              format: uuid
+    PreferenceListResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Preference'
+    UnsubscribeRequest:
+      type: object
+      required: [token, selected_scope]
+      properties:
+        token:
+          type: string
+        selected_scope:
+          type: string
+          enum: [sender, campaign_or_group]
+    UnsubscribeResponse:
+      type: object
+      required: [contact_id, applied_scope]
+      properties:
+        contact_id:
+          type: string
+          format: uuid
+        applied_scope:
+          type: string
+          enum: [sender, campaign_or_group]
+        sender_id:
+          type: [string, 'null']
+          format: uuid
+        campaign_id:
+          type: [string, 'null']
+          format: uuid
+        group_id:
+          type: [string, 'null']
+          format: uuid
+    PaginatedEnvelope:
+      type: object
+      required: [items, page, size, total]
+      properties:
+        items:
+          type: array
+          items: {}
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details, request_id]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+            request_id:
+              type: string
+              format: uuid
+    Channel:
+      type: string
+      enum: [email, sms, telegram]
+    InteractiveRole:
+      type: string
+      enum: [recipient_user, source_operator, admin]

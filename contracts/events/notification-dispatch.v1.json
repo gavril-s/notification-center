@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://notification-center.local/contracts/events/notification-dispatch.v1.json",
+  "title": "notification.dispatch.v1",
+  "description": "Frozen Track 0 RabbitMQ event contract published by Notifications and consumed by Delivery.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "notification_id",
+    "sender_id",
+    "contact_id",
+    "campaign_id",
+    "group_id",
+    "channel",
+    "subject",
+    "rendered_content",
+    "unsubscribe_url",
+    "metadata",
+    "attempt",
+    "trace_id",
+    "created_at"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "notification_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "sender_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "contact_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "campaign_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "group_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "channel": {
+      "type": "string",
+      "enum": ["email", "sms", "telegram"]
+    },
+    "subject": {
+      "type": ["string", "null"]
+    },
+    "rendered_content": {
+      "type": "string"
+    },
+    "unsubscribe_url": {
+      "type": ["string", "null"]
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "trace_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

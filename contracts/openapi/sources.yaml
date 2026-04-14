@@ -1,0 +1,691 @@
+openapi: 3.1.0
+info:
+  title: Notification Center Sources API
+  version: 1.0.0
+  description: Frozen Track 0 public REST contract for the Sources service.
+servers:
+  - url: /
+paths:
+  /api/sources/senders:
+    get:
+      summary: List senders visible to the current operator
+      operationId: listSenders
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Paginated sender list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderListResponse'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      summary: Create a sender
+      operationId: createSender
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSenderRequest'
+      responses:
+        '201':
+          description: Sender created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sender'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/sources/senders/{sender_id}/operators:
+    post:
+      summary: Assign an operator to a sender
+      operationId: assignSenderOperator
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SenderIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignSenderOperatorRequest'
+      responses:
+        '201':
+          description: Operator assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderOperatorAssignment'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/sources/senders/{sender_id}/credentials:
+    post:
+      summary: Create or rotate an integration credential for a sender
+      operationId: createSenderCredential
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SenderIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSenderCredentialRequest'
+      responses:
+        '201':
+          description: Credential created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenderCredential'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/sources/templates:
+    get:
+      summary: List templates available to the current operator
+      operationId: listTemplates
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/SenderIdQuery'
+      responses:
+        '200':
+          description: Paginated template list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateListResponse'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      summary: Create a template
+      operationId: createTemplate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTemplateRequest'
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/sources/templates/{template_id}:
+    put:
+      summary: Update a template
+      operationId: updateTemplate
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTemplateRequest'
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      summary: Soft-delete a template
+      operationId: deleteTemplate
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '204':
+          description: Template deleted
+        default:
+          $ref: '#/components/responses/Error'
+  /api/sources/groups:
+    get:
+      summary: List recipient groups
+      operationId: listGroups
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/SenderIdQuery'
+      responses:
+        '200':
+          description: Paginated group list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupListResponse'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      summary: Create a recipient group
+      operationId: createGroup
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupRequest'
+      responses:
+        '201':
+          description: Group created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/sources/groups/{group_id}:
+    put:
+      summary: Update a recipient group
+      operationId: updateGroup
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGroupRequest'
+      responses:
+        '200':
+          description: Group updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/sources/groups/{group_id}/members:
+    post:
+      summary: Replace or append stable contact members for a group
+      operationId: upsertGroupMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertGroupMembersRequest'
+      responses:
+        '200':
+          description: Members updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupMembersResponse'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/sources/campaigns:
+    get:
+      summary: List campaigns available to the current operator
+      operationId: listCampaigns
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/SenderIdQuery'
+      responses:
+        '200':
+          description: Paginated campaign list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CampaignListResponse'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      summary: Create a campaign
+      operationId: createCampaign
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCampaignRequest'
+      responses:
+        '201':
+          description: Campaign created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+        default:
+          $ref: '#/components/responses/Error'
+  /api/sources/campaigns/{campaign_id}:
+    put:
+      summary: Update a campaign
+      operationId: updateCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CampaignId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCampaignRequest'
+      responses:
+        '200':
+          description: Campaign updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+        default:
+          $ref: '#/components/responses/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Size:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    SenderIdQuery:
+      name: sender_id
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+    GroupId:
+      name: group_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SenderIdPath:
+      name: sender_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CampaignId:
+      name: campaign_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TemplateId:
+      name: template_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Error:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    CreateSenderRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+    Sender:
+      type: object
+      required: [sender_id, name, active]
+      properties:
+        sender_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        active:
+          type: boolean
+    SenderListResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Sender'
+    AssignSenderOperatorRequest:
+      type: object
+      required: [user_id]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [source_operator, admin]
+    SenderOperatorAssignment:
+      type: object
+      required: [sender_id, user_id, role]
+      properties:
+        sender_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [source_operator, admin]
+    CreateSenderCredentialRequest:
+      type: object
+      properties:
+        name:
+          type: string
+    SenderCredential:
+      type: object
+      required: [credential_id, sender_id, integration_key, active]
+      properties:
+        credential_id:
+          type: string
+          format: uuid
+        sender_id:
+          type: string
+          format: uuid
+        integration_key:
+          type: string
+        active:
+          type: boolean
+    CreateTemplateRequest:
+      type: object
+      required: [sender_id, name, channel, body, variables]
+      properties:
+        sender_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        channel:
+          $ref: '#/components/schemas/Channel'
+        subject:
+          type: [string, 'null']
+        body:
+          type: string
+        variables:
+          type: array
+          items:
+            type: string
+    UpdateTemplateRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreateTemplateRequest'
+    Template:
+      type: object
+      required: [template_id, sender_id, name, channel, body, variables, active]
+      properties:
+        template_id:
+          type: string
+          format: uuid
+        sender_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        channel:
+          $ref: '#/components/schemas/Channel'
+        subject:
+          type: [string, 'null']
+        body:
+          type: string
+        variables:
+          type: array
+          items:
+            type: string
+        active:
+          type: boolean
+    TemplateListResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Template'
+    CreateGroupRequest:
+      type: object
+      required: [sender_id, name]
+      properties:
+        sender_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    UpdateGroupRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        active:
+          type: boolean
+    Group:
+      type: object
+      required: [group_id, sender_id, name, active]
+      properties:
+        group_id:
+          type: string
+          format: uuid
+        sender_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        active:
+          type: boolean
+    GroupListResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Group'
+    UpsertGroupMembersRequest:
+      type: object
+      required: [contact_ids]
+      properties:
+        contact_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    GroupMembersResponse:
+      type: object
+      required: [group_id, contact_ids]
+      properties:
+        group_id:
+          type: string
+          format: uuid
+        contact_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+    CreateCampaignRequest:
+      type: object
+      required: [sender_id, group_id, template_id, name, channels, recurrence_rule]
+      properties:
+        sender_id:
+          type: string
+          format: uuid
+        group_id:
+          type: string
+          format: uuid
+        template_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        scheduled_at:
+          type: [string, 'null']
+          format: date-time
+        channels:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            $ref: '#/components/schemas/Channel'
+        recurrence_rule:
+          $ref: '#/components/schemas/RecurrenceRule'
+    UpdateCampaignRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreateCampaignRequest'
+    Campaign:
+      type: object
+      required:
+        - campaign_id
+        - sender_id
+        - group_id
+        - template_id
+        - name
+        - channels
+        - recurrence_rule
+        - active
+      properties:
+        campaign_id:
+          type: string
+          format: uuid
+        sender_id:
+          type: string
+          format: uuid
+        group_id:
+          type: string
+          format: uuid
+        template_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        scheduled_at:
+          type: [string, 'null']
+          format: date-time
+        channels:
+          type: array
+          minItems: 1
+          maxItems: 1
+          items:
+            $ref: '#/components/schemas/Channel'
+        recurrence_rule:
+          $ref: '#/components/schemas/RecurrenceRule'
+        active:
+          type: boolean
+    CampaignListResponse:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedEnvelope'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Campaign'
+    RecurrenceRule:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [once, daily, weekly, cron]
+        value:
+          type: [string, 'null']
+    PaginatedEnvelope:
+      type: object
+      required: [items, page, size, total]
+      properties:
+        items:
+          type: array
+          items: {}
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details, request_id]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+            request_id:
+              type: string
+              format: uuid
+    Channel:
+      type: string
+      enum: [email, sms, telegram]
