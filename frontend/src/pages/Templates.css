@@ -1,0 +1,25 @@
+.templates-page {
+  max-width: 1200px;
+}
+
+.card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.template-subject {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin: 0.25rem 0 0;
+}
+
+.form-hint {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+.form-input[type="textarea"] {
+  min-height: 100px;
+}

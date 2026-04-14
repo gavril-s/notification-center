@@ -1,0 +1,110 @@
+.unsubscribe-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.unsubscribe-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 2.5rem;
+  text-align: center;
+}
+
+.unsubscribe-card h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.unsubscribe-subtitle {
+  color: var(--color-text-secondary);
+  margin-bottom: 2rem;
+}
+
+.unsubscribe-form {
+  margin-bottom: 1.5rem;
+}
+
+.scope-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.scope-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.scope-option:hover {
+  border-color: var(--color-primary);
+}
+
+.scope-option:has(input:checked) {
+  border-color: var(--color-primary);
+  background-color: rgba(79, 70, 229, 0.05);
+}
+
+.scope-option input {
+  margin-top: 0.25rem;
+}
+
+.scope-label {
+  font-size: 0.9375rem;
+  color: var(--color-text);
+}
+
+.unsubscribe-footer {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.unsubscribe-success,
+.unsubscribe-error {
+  padding: 2rem 0;
+}
+
+.success-icon,
+.error-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  margin: 0 auto 1.5rem;
+}
+
+.success-icon {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.error-icon {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.unsubscribe-success h1 {
+  color: #166534;
+}
+
+.unsubscribe-error h1 {
+  color: #991b1b;
+}

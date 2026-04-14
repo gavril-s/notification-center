@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify docker compose config
+        run: |
+          if command -v docker-compose >/dev/null 2>&1; then
+            docker-compose config >/dev/null
+          else
+            docker compose config >/dev/null
+          fi
+
+      - name: Run lint placeholder
+        run: sh scripts/lint-platform.sh
+
+      - name: Run contract validation placeholder
+        run: sh scripts/validate-contracts.sh
+
+      - name: Run structural platform tests
+        run: sh scripts/test-platform.sh

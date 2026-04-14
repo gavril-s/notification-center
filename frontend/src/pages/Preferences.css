@@ -1,0 +1,9 @@
+.preferences-page {
+  max-width: 1000px;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}

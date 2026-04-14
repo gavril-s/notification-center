@@ -1,0 +1,36 @@
+# Environment
+.env
+.env.local
+.env.*.local
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+# Build artifacts
+bin/
+dist/
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+# OS
+.DS_Store
+Thumbs.db
+# Docker
+*.pid
+*.seed
+*.pid.lock
+# Logs
+*.log
+# Node (frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

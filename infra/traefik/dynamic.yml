@@ -1,0 +1,13 @@
+http:
+  routers:
+    notification-center:
+      entryPoints:
+        - web
+      rule: PathPrefix(`/`)
+      service: notification-center
+
+  services:
+    notification-center:
+      loadBalancer:
+        servers:
+          - url: http://nginx:80

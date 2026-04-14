@@ -1,0 +1,92 @@
+{
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "notification.dispatch",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "notification.dispatch.retry",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "notification.dispatch.dlq",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "notification.dispatch.v1",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "notification.dispatch.dlq",
+        "x-dead-letter-routing-key": "notification.dispatch.dead"
+      }
+    },
+    {
+      "name": "notification.dispatch.v1.retry",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "notification.dispatch",
+        "x-dead-letter-routing-key": "notification.dispatch",
+        "x-message-ttl": 30000
+      }
+    },
+    {
+      "name": "notification.dispatch.v1.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "notification.dispatch",
+      "vhost": "/",
+      "destination": "notification.dispatch.v1",
+      "destination_type": "queue",
+      "routing_key": "notification.dispatch",
+      "arguments": {}
+    },
+    {
+      "source": "notification.dispatch.retry",
+      "vhost": "/",
+      "destination": "notification.dispatch.v1.retry",
+      "destination_type": "queue",
+      "routing_key": "notification.dispatch.retry",
+      "arguments": {}
+    },
+    {
+      "source": "notification.dispatch.dlq",
+      "vhost": "/",
+      "destination": "notification.dispatch.v1.dlq",
+      "destination_type": "queue",
+      "routing_key": "notification.dispatch.dead",
+      "arguments": {}
+    }
+  ]
+}
