@@ -3,8 +3,17 @@ import { useAuth } from '../contexts/AuthContext'
 import './Layout.css'
 
 export default function Layout({ isOperator = false }: { isOperator?: boolean }) {
-  const { user, logout } = useAuth()
+  const { user, isLoading, logout } = useAuth()
   const navigate = useNavigate()
+
+  if (isLoading || !user) {
+    return (
+      <div className="loading-screen">
+        <div className="spinner"></div>
+        <p>Загрузка...</p>
+      </div>
+    )
+  }
 
   const handleLogout = () => {
     logout()

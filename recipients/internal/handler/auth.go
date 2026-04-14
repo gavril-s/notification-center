@@ -87,9 +87,14 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		return
 	}
 
+	role := "recipient_user"
+	if c.GetBool("is_admin") {
+		role = "admin"
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"user_id":  userID,
-		"login":    c.GetString("login"),
-		"is_admin": c.GetBool("is_admin"),
+		"user_id": userID,
+		"login":   c.GetString("login"),
+		"role":    role,
 	})
 }
