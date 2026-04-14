@@ -1,11 +1,10 @@
-FROM golang:1.22-alpine AS build
+FROM golang:1.23 AS build
 
 WORKDIR /app
 
-RUN apk add --no-cache git
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
 ENV GOPROXY=direct
-ENV GOTOOLCHAIN=local
 
 COPY go.mod go.sum ./
 RUN go mod download
@@ -13,9 +12,9 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /notifications-service ./cmd/api
 
-FROM alpine:3.19
+FROM debian:stable-slim
 
-RUN apk --no-cache add ca-certificates tzdata
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata wget && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=build /notifications-service .

@@ -18,6 +18,11 @@ export default function Login() {
     e.preventDefault()
     setError('')
 
+    if (isRegister && password.length < 6) {
+      setError('Пароль должен содержать минимум 6 символов')
+      return
+    }
+
     if (isRegister && password !== confirmPassword) {
       setError('Пароли не совпадают')
       return
@@ -82,7 +87,9 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete={isRegister ? 'new-password' : 'current-password'}
+              minLength={6}
             />
+            {isRegister && <p className="form-hint">Минимум 6 символов</p>}
           </div>
 
           {isRegister && (

@@ -55,9 +55,11 @@ CREATE TABLE IF NOT EXISTS recipients.preferences (
     quiet_to VARCHAR(5),
     blocked_channels JSONB NOT NULL DEFAULT '[]',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    UNIQUE(contact_id, scope_type, COALESCE(sender_id, '00000000-0000-0000-0000-000000000000'), COALESCE(scope_id, '00000000-0000-0000-0000-000000000000'))
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_preferences_unique 
+    ON recipients.preferences(contact_id, scope_type, COALESCE(sender_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(scope_id, '00000000-0000-0000-0000-000000000000'::uuid));
 
 CREATE INDEX IF NOT EXISTS idx_preferences_contact_id ON recipients.preferences(contact_id);
 CREATE INDEX IF NOT EXISTS idx_preferences_user_id ON recipients.preferences(user_id);
@@ -70,9 +72,11 @@ CREATE TABLE IF NOT EXISTS recipients.unsubscribe_rules (
     sender_id UUID,
     scope_type VARCHAR(50) NOT NULL,
     scope_id UUID,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    UNIQUE(contact_id, scope_type, COALESCE(sender_id, '00000000-0000-0000-0000-000000000000'), COALESCE(scope_id, '00000000-0000-0000-0000-000000000000'))
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unsubscribe_rules_unique 
+    ON recipients.unsubscribe_rules(contact_id, scope_type, COALESCE(sender_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(scope_id, '00000000-0000-0000-0000-000000000000'::uuid));
 
 CREATE INDEX IF NOT EXISTS idx_unsubscribe_rules_contact_id ON recipients.unsubscribe_rules(contact_id);
 

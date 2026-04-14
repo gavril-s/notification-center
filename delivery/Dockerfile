@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine AS build
+FROM golang:1.23 AS build
 
 WORKDIR /app
 
@@ -8,9 +8,9 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /delivery ./cmd/consumer
 
-FROM alpine:3.19
+FROM debian:stable-slim
 
-RUN apk --no-cache add ca-certificates tzdata
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata wget && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=build /delivery .

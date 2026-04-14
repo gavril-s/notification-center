@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine AS build
+FROM golang:1.23 AS build
 
 WORKDIR /app
 
@@ -8,9 +8,9 @@ COPY cmd cmd/
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/recipients ./cmd/api
 
-FROM alpine:3.20
+FROM debian:stable-slim
 
-RUN apk --no-cache add ca-certificates
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates wget && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
