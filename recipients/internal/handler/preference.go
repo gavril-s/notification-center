@@ -62,7 +62,12 @@ func (h *PreferenceHandler) List(c *gin.Context) {
 		response = append(response, preferenceToResponse(&pref))
 	}
 
-	c.JSON(http.StatusOK, gin.H{"preferences": response})
+	c.JSON(http.StatusOK, gin.H{
+		"items": response,
+		"page":  1,
+		"size":  len(response),
+		"total": len(response),
+	})
 }
 
 // Update handles PUT /api/recipients/preferences

@@ -54,7 +54,12 @@ func (h *ContactHandler) List(c *gin.Context) {
 		response = append(response, contactToResponse(&contact))
 	}
 
-	c.JSON(http.StatusOK, gin.H{"contacts": response})
+	c.JSON(http.StatusOK, gin.H{
+		"items": response,
+		"page":  1,
+		"size":  len(response),
+		"total": len(response),
+	})
 }
 
 // Create handles POST /api/recipients/contacts
@@ -67,11 +72,9 @@ func (h *ContactHandler) Create(c *gin.Context) {
 
 	var req service.CreateContactRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный запрос", "details": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный запрос"})
 		return
 	}
-
-	req.UserID = userID
 
 	contact, err := h.contactService.Create(c.Request.Context(), userID, &req)
 	if err != nil {
