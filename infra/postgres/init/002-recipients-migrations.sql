@@ -128,5 +128,5 @@ CREATE TABLE IF NOT EXISTS recipients.schema_migrations (
 
 -- Insert default admin user (password: admin123, hash is bcrypt of "admin123")
 INSERT INTO recipients.users (id, login, password_hash, is_admin, created_at, updated_at)
-VALUES ('00000000-0000-0000-0000-000000000001', 'admin', '$2a$10$rXnLwK7rQ2e5w5h5h5h5h5h5h5h5h5h5h5h5h5h5h5h5h5h5h5h5h', true, NOW(), NOW())
+VALUES ('00000000-0000-0000-0000-000000000001', 'admin', '$2y$10$.Anx3M4A811kK9PygwYpseAmDH/rk1mUcwGAvvuPyX3hsyrUhLzh6', true, NOW(), NOW())
 ON CONFLICT (login) DO NOTHING;
