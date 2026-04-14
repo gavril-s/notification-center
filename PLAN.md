@@ -302,6 +302,12 @@ The queue payload should include:
 
 ## 6. Implementation Phases
 
+Parallel execution note:
+
+- The tasks in this section describe logical implementation phases, not mandatory one-team ownership boundaries.
+- For parallel execution, `Task 5: Notifications Service` and `Task 6: Delivery Service` may be implemented as one combined notification pipeline workstream until the end-to-end flow is stable.
+- `Task 8: Security, Observability, and Operations` and `Task 9: System Validation and Release Readiness` remain required final outcomes, but parts of this work should begin earlier under platform coordination so that service teams can integrate into shared security, observability, and verification conventions from the start.
+
 ### Task 1: Architecture Baseline and Contract Freeze
 
 **Objective:** Remove ambiguities in the current diagrams and create a stable foundation for parallel implementation.
@@ -365,6 +371,7 @@ The queue payload should include:
 - [ ] Implement sender-level unsubscribe.
 - [ ] Implement mailing-level unsubscribe for campaigns or groups.
 - [ ] Implement guest unsubscribe flow using secure unsubscribe tokens.
+- [ ] Implement seeded administrator bootstrap in the authentication domain.
 - [ ] Implement guest-to-user contact linking through verified contact claim.
 - [ ] Implement internal recipient resolution API for `Notifications`.
 - [ ] Implement audit logging for preference changes.
@@ -402,7 +409,7 @@ The queue payload should include:
 
 - [ ] Implement sender entity and sender-scoped operator access.
 - [ ] Implement sender integration credentials for external source systems.
-- [ ] Implement administrator bootstrap and operator-to-sender assignment flow.
+- [ ] Implement operator-to-sender assignment flow.
 - [ ] Implement template CRUD with versioning support.
 - [ ] Implement template preview and variable validation.
 - [ ] Implement contact groups for mailing lists.
