@@ -4,11 +4,18 @@
 
 **Goal:** Build the full Notification Center system: recipient management, contact and preference management, source/operator management, templates, campaigns, one-time and recurring notifications, asynchronous multi-channel delivery through mock channels, notification history, unsubscribe flows, and per-sender analytics.
 
-**Architecture:** The target system consists of a React frontend behind an API gateway layer implemented by NGINX and four Go services: `Recipients`, `Sources`, `Notifications`, and `Delivery`. Services communicate via REST, except the handoff from `Notifications` to `Delivery`, which goes through RabbitMQ. PostgreSQL is deployed as a single shared infrastructure component according to the diagrams, while service boundaries are preserved at the application level. `Notifications` owns the notification lifecycle and per-sender analytics read models; `Delivery` uses mock channel adapters, stores delivery attempts in the shared database, and reports results back to `Notifications` through an internal API.
+**Architecture:** The target system consists of a React frontend behind an API gateway layer implemented by NGINX and four Go services: `Recipients`, `Sources`, `Notifications`, and `Delivery`. Services communicate via REST, except the handoff from `Notifications` to `Delivery`, which goes through RabbitMQ. PostgreSQL is deployed as a single shared infrastructure component according to the diagrams, while service boundaries are preserved at the application level. `Notifications` owns the canonical notification lifecycle and per-sender analytics read models; `Delivery` uses mock channel adapters, stores transport-level delivery attempts in the shared database, and reports results back to `Notifications` through an internal API. Every service is deployed in its own Docker container, and the entire system is started through one `docker-compose` file that also includes infrastructure components.
 
 **Tech Stack:** Go + Gin, React 18+, PostgreSQL 15+, RabbitMQ, NGINX, Traefik, Docker Compose, JWT, OpenAPI/Swagger, Prometheus/Grafana, structured logging, integration tests with Docker/Testcontainers.
 
 ---
+
+## Mandatory Project Rules
+
+- The entire user interface must be in Russian only.
+- Every backend service, the frontend, and infrastructure components must be deployed through Docker.
+- The entire system must be started through one `docker-compose` configuration that includes application containers and databases or brokers.
+- If any implementation uncertainty appears, diagrams in `ПП/Диаграммы/` and project files such as `CLAUDE.md` must be checked before making a decision.
 
 ## 1. Final System Scope
 
@@ -80,10 +87,23 @@ Recommended model:
 - Roles: `recipient_user`, `source_operator`, `admin`.
 - `Sources` owns sender/operator access relationships, because sender ownership belongs to source management.
 - `Notifications` and `Sources` trust JWT claims and, where needed, verify sender access through `Sources` internal APIs.
+- External source systems do not use end-user JWTs; they authenticate with sender-bound machine credentials.
+- Initial administrator bootstrap must come from seed configuration or environment variables, after which administrator users can assign `source_operator` access to senders.
 
 This avoids introducing a fifth backend service while still supporting role separation.
 
-### 2.4 Notification Lifecycle Ownership
+### 2.4 Source System Authentication
+
+The public `POST /api/notifications/send` endpoint must use machine-to-machine authentication tied to a sender.
+
+Rules:
+
+- Each sender receives an integration credential such as an API key or signed secret.
+- `Sources` owns sender integration credentials, their rotation status, and whether they are active.
+- `Notifications` validates the presented integration credential through an internal call to `Sources` before accepting a send request.
+- Every accepted send request must be traceable to a specific sender integration.
+
+### 2.5 Notification Lifecycle Ownership
 
 `Notifications` owns the canonical notification status.
 
@@ -99,9 +119,9 @@ Recommended canonical states:
 - `cancelled`
 - `skipped_by_preference`
 
-`Delivery` owns delivery attempts and mock adapter metadata, and persists those attempt records in the shared PostgreSQL component. `Notifications` must remain the source of truth for business notification state. After each delivery attempt, `Delivery` stores the attempt result and calls an internal `Notifications` endpoint to update the canonical notification status.
+`Delivery` owns transport-level delivery statuses, delivery attempts, and mock adapter metadata, and persists those attempt records in the shared PostgreSQL component. `Notifications` must remain the source of truth for business notification state. After each delivery attempt, `Delivery` stores the attempt result and calls an internal `Notifications` endpoint to update the canonical notification status.
 
-### 2.5 Recurring Notification Ownership
+### 2.6 Recurring Notification Ownership
 
 Use this split:
 
@@ -110,7 +130,7 @@ Use this split:
 
 This keeps business definitions in `Sources` and execution logic in `Notifications`.
 
-### 2.6 Preference Precedence Rules
+### 2.7 Preference Precedence Rules
 
 Preference evaluation must be explicit and deterministic. Recommended precedence:
 
@@ -123,7 +143,7 @@ Preference evaluation must be explicit and deterministic. Recommended precedence
 7. Mock delivery fallback chooses an alternative adapter inside the same channel when supported.
 8. If no eligible channel remains, notification is marked `skipped_by_preference`.
 
-### 2.7 Channel Model
+### 2.8 Channel Model
 
 Define channel types as extensible string enums, not integer-only opaque codes.
 
@@ -135,7 +155,7 @@ Recommended initial values:
 
 Adapter implementations remain pluggable behind the channel abstraction, but the project scope includes mocks only.
 
-### 2.8 Guest Contact Claim Model
+### 2.9 Guest Contact Claim Model
 
 The plan must support turning a guest recipient into a registered user without losing any previously created data.
 
@@ -147,7 +167,7 @@ Rules:
 - Contact claiming must use normalized contact values plus a verification token or one-time code to prevent accidental or malicious reassignment.
 - History and unsubscribe state must remain attached to `contact_id`, so linking a contact to a user does not rewrite historical notification records.
 
-### 2.9 Reliable Queue Handoff
+### 2.10 Reliable Queue Handoff
 
 The handoff from `Notifications` to RabbitMQ must be durable and retry-safe.
 
@@ -223,7 +243,7 @@ notifications/
 | Component | Owns | Responsibilities |
 | --- | --- | --- |
 | `Recipients` | users, contacts, preferences, unsubscribe rules, auth tokens | registration, login, account profile, contact CRUD, quiet hours, channel blocking, sender unsubscribe, mailing unsubscribe, guest unsubscribe, guest-to-user linking |
-| `Sources` | senders, templates, groups, campaigns, recurrence rules, operator access | operator cabinet APIs, sender scoping, template CRUD, recipient groups, campaign CRUD |
+| `Sources` | senders, templates, groups, campaigns, recurrence rules, operator access, sender integration credentials | operator cabinet APIs, sender scoping, template CRUD, recipient groups, campaign CRUD, source-system credential management |
 | `Notifications` | notification records, state machine, scheduling jobs, history, per-sender analytics read models | send API, template rendering, recipient resolution, preference evaluation, queue publishing, internal status updates, history APIs, analytics APIs |
 | `Delivery` | delivery attempts, mock adapter results, retry state, DLQ records | queue consumption, mock delivery execution, retries, dead-letter handling, shared-DB attempt persistence, status callback to `Notifications` |
 | `Frontend` | UI only | recipient cabinet, operator cabinet, history, analytics, unsubscribe UX |
@@ -289,6 +309,8 @@ The queue payload should include:
 - [ ] Approve the gateway decision: NGINX-only, no separate Go gateway.
 - [ ] Approve the PostgreSQL strategy: one shared PostgreSQL component following the diagrams.
 - [ ] Approve auth ownership in `Recipients`.
+- [ ] Approve machine-to-machine auth for external source systems.
+- [ ] Approve administrator bootstrap and operator assignment flow.
 - [ ] Approve the canonical notification state machine.
 - [ ] Approve preference precedence rules.
 - [ ] Approve the guest contact claim model.
@@ -313,6 +335,7 @@ The queue payload should include:
 
 - [ ] Create the directory structure for all services, frontend, contracts, docs, and infrastructure.
 - [ ] Add root `docker-compose.yml` for PostgreSQL, RabbitMQ, NGINX, Traefik, all services, frontend, and monitoring tools.
+- [ ] Ensure every service and infrastructure component is started from the single root `docker-compose.yml`.
 - [ ] Add a root `Makefile` with targets for `lint`, `test`, `build`, `up`, `down`, and `migrate`.
 - [ ] Configure local PostgreSQL as one shared component for all services.
 - [ ] Configure RabbitMQ exchanges, queues, retry queues, and dead-letter queues.
@@ -378,6 +401,8 @@ The queue payload should include:
 **Objective:** Implement sender-side management of templates, groups, campaigns, and recurrence rules.
 
 - [ ] Implement sender entity and sender-scoped operator access.
+- [ ] Implement sender integration credentials for external source systems.
+- [ ] Implement administrator bootstrap and operator-to-sender assignment flow.
 - [ ] Implement template CRUD with versioning support.
 - [ ] Implement template preview and variable validation.
 - [ ] Implement contact groups for mailing lists.
@@ -386,11 +411,14 @@ The queue payload should include:
 - [ ] Implement campaign scheduling metadata.
 - [ ] Implement internal APIs for template lookup and due campaign retrieval.
 - [ ] Add tests for sender isolation, template variable validation, and recurrence rule calculation.
+- [ ] Add tests for sender credential validation and operator assignment permissions.
 
 **Recommended public endpoints:**
 
 - `GET /api/sources/senders`
 - `POST /api/sources/senders`
+- `POST /api/sources/senders/{sender_id}/operators`
+- `POST /api/sources/senders/{sender_id}/credentials`
 - `GET /api/sources/templates`
 - `POST /api/sources/templates`
 - `PUT /api/sources/templates/{template_id}`
@@ -409,6 +437,7 @@ The queue payload should include:
 - `GET /internal/sources/campaigns/{campaign_id}`
 - `GET /internal/sources/campaigns/due`
 - `GET /internal/sources/senders/{sender_id}/operators/{user_id}`
+- `POST /internal/sources/senders/resolve-credential`
 
 **Exit criteria:**
 
@@ -421,6 +450,7 @@ The queue payload should include:
 **Objective:** Implement orchestration, scheduling, notification history, and per-sender analytics ownership.
 
 - [ ] Implement `POST /api/notifications/send` for external source systems.
+- [ ] Validate machine-to-machine sender credentials before accepting a send request.
 - [ ] Add idempotency support for send requests.
 - [ ] Validate sender, template, and payload variables.
 - [ ] Fetch template and sender data from `Sources`.
@@ -483,6 +513,7 @@ The queue payload should include:
 **Objective:** Build a complete user and operator web interface.
 
 - [ ] Implement authentication screens.
+- [ ] Keep all user-facing text and UI labels in Russian only.
 - [ ] Implement recipient cabinet for contacts and preferences.
 - [ ] Implement quiet hours and channel control UI.
 - [ ] Implement guest unsubscribe page with sender-level and mailing-level choices when supported by the notification.
@@ -546,6 +577,7 @@ The queue payload should include:
 - [ ] Add end-to-end tests through NGINX for critical flows.
 - [ ] Verify user registration, login, contact creation, and preference updates.
 - [ ] Verify template and campaign creation by an operator.
+- [ ] Verify source-system authentication for notification creation.
 - [ ] Verify notification creation by an external source system.
 - [ ] Verify queue publishing, outbox recovery, consumption, and mock delivery result propagation.
 - [ ] Verify history visibility for the user.
@@ -569,6 +601,7 @@ The queue payload should include:
 
 - The entire system can be started locally.
 - All critical flows pass end-to-end.
+- All UI text is in Russian only.
 - The project is ready for a demo, report, and final defense.
 
 ## 7. Increment Roadmap
@@ -587,6 +620,7 @@ Scope:
 Success criteria:
 
 - A source system can request a notification.
+- The source system request is authenticated with sender-bound machine credentials.
 - The system respects basic recipient preferences.
 - A message is queued, consumed, and marked with final status.
 - A user can see or infer delivery history.
@@ -631,6 +665,7 @@ The implementation is complete when all conditions below are true:
 - A guest recipient can later become a registered user without losing existing history and preferences.
 - A source operator can manage senders, templates, groups, and campaigns.
 - An external source system can create notifications through the public API.
+- External source-system access is authenticated and traceable to a sender integration.
 - Notifications are rendered, include unsubscribe links where required, are filtered by preferences, queued durably, and delivered asynchronously.
 - Delivery failures are retried and traceable.
 - Notification history is available to users.
